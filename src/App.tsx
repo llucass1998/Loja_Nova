@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { produtosMock } from './dados';
+import { Cadastro } from './Cadastro';
 import type { Produto } from './types';
 
 // 1. Criamos um tipo específico para o Carrinho. 
@@ -9,11 +10,20 @@ interface ItemCarrinho extends Produto {
 }
 
 function App() {
-  // 2. Agora o nosso carrinho guarda itens do tipo 'ItemCarrinho'
+  // Estados limpos e organizados (sem duplicatas)
   const [carrinho, setCarrinho] = useState<ItemCarrinho[]>([]);
+  const [mostrarCadastro, setMostrarCadastro] = useState(false);
+  const [usuarioLogado, setUsuarioLogado] = useState(false);
 
-  // 3. A Nova Lógica Matemática
+  // 3. A Nova Lógica Matemática com trava de usuário logado
   const adicionarAoCarrinho = (produto: Produto) => {
+    // TRAVA: Bloqueia a compra se o usuário não tiver uma conta
+    if (!usuarioLogado) {
+      alert("Você precisa criar uma conta para adicionar itens ao carrinho!");
+      setMostrarCadastro(true); // Abre o formulário automaticamente
+      return; // Interrompe a execução aqui
+    }
+
     // Tenta encontrar o produto dentro do carrinho atual
     const itemExistente = carrinho.find((item) => item.id === produto.id);
 
@@ -31,7 +41,7 @@ function App() {
     }
   };
 
-  // 4. Recalculando os totais (agora multiplicamos o valor pela quantidade pedida)
+  // 4. Recalculando os totais baseados na quantidade do pedido
   const totalItens = carrinho.reduce((total, item) => total + item.quantidadePedido, 0);
   const valorTotal = carrinho.reduce((total, item) => total + (item.valor * item.quantidadePedido), 0);
 
@@ -41,40 +51,57 @@ function App() {
       {/* CABEÇALHO */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fff', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', marginBottom: '30px' }}>
         <h1 style={{ margin: 0, color: '#2c3e50' }}>Nandez Chocolates</h1>
-        <div style={{ backgroundColor: '#e67e22', color: 'white', padding: '10px 20px', borderRadius: '8px', fontWeight: 'bold', fontSize: '1.2rem' }}>
-          {/* Atualizamos aqui para mostrar o 'totalItens' matemático */}
-          🛒 {totalItens} itens | Total: R$ {valorTotal.toFixed(2)}
+        
+        <div style={{ display: 'flex', gap: '15px' }}>
+          {/* Alterna o botão de criar conta pelo aviso de logado */}
+          {!usuarioLogado ? (
+            <button 
+              onClick={() => setMostrarCadastro(true)}
+              style={{ padding: '10px 15px', backgroundColor: '#34495e', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>
+              👤 Criar Conta
+            </button>
+          ) : (
+            <div style={{ padding: '10px 15px', color: '#27ae60', fontWeight: 'bold', display: 'flex', alignItems: 'center' }}>
+              ✅ Você está logado!
+            </div>
+          )}
+          
+          <div style={{ backgroundColor: '#e67e22', color: 'white', padding: '10px 20px', borderRadius: '8px', fontWeight: 'bold', fontSize: '1.2rem' }}>
+            🛒 {totalItens} itens | Total: R$ {valorTotal.toFixed(2)}
+          </div>
         </div>
       </div>
       
-      {/* LISTA DE PRODUTOS */}
-      <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', justifyContent: 'center' }}>
+      {/* ALTERNA ENTRE AS TELAS DA APLICAÇÃO */}
+      {mostrarCadastro ? (
         
-        {produtosMock.map((produto) => (
-          <div key={produto.id} style={{ backgroundColor: '#fff', border: '1px solid #eee', padding: '15px', borderRadius: '8px', width: '300px', display: 'flex', flexDirection: 'column', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
-            
-            <img 
-              src={produto.foto[0]} 
-              alt={produto.nome} 
-              style={{ width: '100%', height: '280px', objectFit: 'cover', borderRadius: '8px', marginBottom: '15px' }} 
-            />
-            
-            <h2 style={{ fontSize: '1.3rem', margin: '0 0 10px 0', color: '#333' }}>{produto.nome}</h2>
-            <p style={{ color: '#666', fontSize: '0.9rem', flexGrow: 1, lineHeight: '1.4' }}>{produto.descricao}</p>
-            <h3 style={{ color: '#27ae60', fontSize: '1.5rem', margin: '15px 0' }}>R$ {produto.valor.toFixed(2)}</h3>
-            
-            <button 
-              onClick={() => adicionarAoCarrinho(produto)}
-              style={{ padding: '12px', cursor: 'pointer', backgroundColor: '#3498db', color: 'white', border: 'none', borderRadius: '6px', width: '100%', fontWeight: 'bold', fontSize: '1rem', transition: 'background 0.2s' }}
-              onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#2980b9'}
-              onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#3498db'}
-            >
-              Adicionar ao Carrinho
-            </button>
-          </div>
-        ))}
+        // Passamos as duas funções necessárias para o controle do componente de Cadastro
+        <Cadastro 
+          aoVoltar={() => setMostrarCadastro(false)} 
+          aoCadastrar={() => setUsuarioLogado(true)} 
+        />
+        
+      ) : (
+        
+        // Mostra a vitrine tradicional de doces
+        <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', justifyContent: 'center' }}>
+          {produtosMock.map((produto) =>
+            produto.ativo ? (
+              <div key={produto.id} style={{ width: '260px', backgroundColor: '#fff', padding: '16px', borderRadius: '8px', boxShadow: '0 2px 6px rgba(0,0,0,0.08)' }}>
+                <img src={produto.foto[0]} alt={produto.nome} style={{ width: '100%', height: '160px', objectFit: 'contain' }} />
+                <h3 style={{ margin: '10px 0 6px 0' }}>{produto.nome}</h3>
+                <p style={{ fontSize: '0.9rem', color: '#555', height: '44px', overflow: 'hidden' }}>{produto.descricao}</p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
+                  <strong>R$ {produto.valor.toFixed(2)}</strong>
+                  <button onClick={() => adicionarAoCarrinho(produto)} style={{ padding: '8px 10px', backgroundColor: '#27ae60', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Adicionar</button>
+                </div>
+              </div>
+            ) : null
+          )}
+        </div>
 
-      </div>
+      )}
+
     </div>
   );
 }
